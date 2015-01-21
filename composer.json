@@ -1,0 +1,28 @@
+{
+	"name": "fuzz/laravel-data",
+	"description": "Scaffolding package for Laravel data.",
+	"authors": [
+		{
+			"name": "Fuzz Productions",
+			"email": "fuzzweb@fuzzproductions.com"
+		}
+	],
+	"repositories": [
+		{
+			"type": "vcs",
+			"url": "git@gitlab.fuzzhq.com:web-modules/laravel-s3.git"
+		}
+	],
+	"require": {
+		"php": ">=5.4.0",
+		"illuminate/support": "~4.2",
+		"illuminate/database": "~4.2",
+		"fuzz/laravel-s3": "dev-master"
+	},
+	"autoload": {
+		"psr-4": {
+			"Fuzz\\Data\\": "src/"
+		}
+	},
+	"minimum-stability": "dev"
+}
