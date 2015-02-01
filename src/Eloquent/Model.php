@@ -36,7 +36,7 @@ abstract class Model extends Eloquent
 	 * Add additional appended properties to the model via a public interface.
 	 *
 	 * @param string|array $appends
-	 * @return void
+	 * @return static
 	 */
 	public function addAppends($appends)
 	{
@@ -45,13 +45,15 @@ abstract class Model extends Eloquent
 		}
 
 		$this->appends = array_merge($this->appends, $appends);
+
+		return $this;
 	}
 
 	/**
 	 * Unhide hidden properties from the model via a public interface.
 	 *
 	 * @param string|array $appends
-	 * @return void
+	 * @return static
 	 */
 	public function removeHidden($hidden)
 	{
@@ -60,6 +62,8 @@ abstract class Model extends Eloquent
 		}
 
 		$this->hidden = array_diff($this->hidden, $hidden);
+
+		return $this;
 	}
 
 	/**
