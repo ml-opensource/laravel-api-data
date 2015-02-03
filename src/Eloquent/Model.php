@@ -4,10 +4,9 @@ namespace Fuzz\Data\Eloquent;
 
 use Carbon\Carbon;
 use Fuzz\File\File;
-use InvalidArgumentException;
 use Fuzz\LaravelS3\Facades\S3Manager;
-use Illuminate\Support\Facades\Input;
 use Illuminate\Database\Eloquent\Model as Eloquent;
+use Illuminate\Support\Facades\Input;
 
 abstract class Model extends Eloquent
 {
@@ -72,32 +71,31 @@ abstract class Model extends Eloquent
 	 * @param  string|File $input_variable
 	 *         Either a file input name, a local file path, a web URL to a valid image,
 	 *         or a constructed File object
-	 * @param  string $attribute
+	 * @param  string      $attribute
 	 *         The name of the attribute we're setting
-	 * @param  string $crops
+	 * @param  string      $crops
 	 *         An optional crop spec to crop to
 	 * @return string
 	 */
 	final protected function mutateImageAttribute($input_variable, $attribute, $crops = false)
 	{
 		// If the input variable is already an MD5, assume it is already on S3 with reasonable certainty
-		if (! (is_string($input_variable) && preg_match('#[0-9a-f]{32}(_\w+)?\.[a-z]{3,4}$#', $input_variable))) {
+		$image_directory_string = static::getImageDirectoryString();
+		if (! (is_string($input_variable) && preg_match(sprintf('#%s/[0-9a-f]{32}(_\w+)?\.[a-z]{3,4}$#', $image_directory_string), $input_variable))) {
 			$image_directory = static::getImageDirectory();
 
 			// Accept constructed File objects
 			if (is_object($input_variable) && $input_variable instanceof File) {
 				$file = S3Manager::uploadImageFileObject($input_variable, $image_directory, $crops);
-			// Accept multipart file uploads exposed to PHP
+				// Accept multipart file uploads exposed to PHP
 			} elseif (Input::hasFile($input_variable)) {
 				$file = S3Manager::uploadImage($input_variable, $image_directory, $crops);
-			// Accept local file paths
+				// Accept local file paths
 			} elseif (file_exists($input_variable)) {
 				$file = S3Manager::uploadImageFile($input_variable, $image_directory, $crops);
-			// Accept fully qualified URLs to images
+				// Accept fully qualified URLs to images
 			} elseif (filter_var(
-				$input_variable,
-				FILTER_VALIDATE_URL,
-				FILTER_FLAG_SCHEME_REQUIRED & FILTER_FLAG_HOST_REQUIRED & FILTER_FLAG_PATH_REQUIRED
+				$input_variable, FILTER_VALIDATE_URL, FILTER_FLAG_SCHEME_REQUIRED & FILTER_FLAG_HOST_REQUIRED & FILTER_FLAG_PATH_REQUIRED
 			)) {
 				$file = S3Manager::uploadImageBlob(file_get_contents($input_variable), $image_directory, $crops);
 			}
@@ -131,7 +129,7 @@ abstract class Model extends Eloquent
 
 		if (! is_null($crop)) {
 			$path_parts = pathinfo($filename);
-			$filename = @$path_parts['filename'] . '_' . $crop . '.' . $path_parts['extension'];
+			$filename   = @$path_parts['filename'] . '_' . $crop . '.' . $path_parts['extension'];
 		}
 
 		return S3Manager::getUrl($filename, static::getImageDirectory(), true);
@@ -140,10 +138,10 @@ abstract class Model extends Eloquent
 	/**
 	 * Mutator for datetime attributes.
 	 *
-	 * @param string/int $date
-	 *        A parsable datetime string or timestamp
+	 * @param        string /int $date
+	 *                      A parsable datetime string or timestamp
 	 * @param string $attribute
-	 *        The name of the attribute we're setting
+	 *                      The name of the attribute we're setting
 	 * @return \Carbon\Carbon
 	 */
 	final protected function mutateDateTimeAttribute($date, $attribute)
@@ -177,11 +175,11 @@ abstract class Model extends Eloquent
 	 */
 	public static function getImageDirectory($subdirectory = null)
 	{
-		return array(
+		return [
 			static::ASSET_DIRECTORY,
 			$subdirectory,
 			static::IMAGE_DIRECTORY
-		);
+		];
 	}
 
 	/**
@@ -194,6 +192,7 @@ abstract class Model extends Eloquent
 	public static function getImageDirectoryString($subdirectory = null)
 	{
 		$directory_parts = static::getImageDirectory();
+
 		return implode('/', array_filter($directory_parts));
 	}
 
