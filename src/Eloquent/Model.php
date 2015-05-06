@@ -3,6 +3,7 @@
 namespace Fuzz\Data\Eloquent;
 
 use Carbon\Carbon;
+use Fuzz\Data\Schema\SchemaUtility;
 use Illuminate\Database\Eloquent\Model as Eloquent;
 
 abstract class Model extends Eloquent
@@ -69,5 +70,15 @@ abstract class Model extends Eloquent
 	final protected function accessDateTimeAttribute($value)
 	{
 		return strtotime($value);
+	}
+
+	/**
+	 * Return this model's fields.
+	 *
+	 * @return array
+	 */
+	final public function getFields()
+	{
+		return SchemaUtility::describeTable($this->getTable(), $this->getConnection());
 	}
 }
