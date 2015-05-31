@@ -41,15 +41,21 @@ class SchemaUtility
 			$connection = DB::connection();
 		}
 
-		$result = $connection->select(
-			sprintf(
-				'SELECT COLUMN_NAME from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = \'%s\' and TABLE_SCHEMA = \'%s\'', $table, $connection->getDatabaseName()
-			)
-		);
+		if ($connection->getDriverName() === 'sqlite') {
+			$result = $connection->select(sprintf('PRAGMA table_info(%s)', $table));
+			$column_key = 'name';
+		} else {
+			$result = $connection->select(
+				sprintf(
+					'SELECT COLUMN_NAME from INFORMATION_SCHEMA.COLUMNS where TABLE_NAME = \'%s\' and TABLE_SCHEMA = \'%s\'', $table, $connection->getDatabaseName()
+				)
+			);
+			$column_key = 'COLUMN_NAME';
+		}
 
 		return array_map(
-			function ($item) {
-				return $item->COLUMN_NAME;
+			function ($item) use ($column_key) {
+				return $item->$column_key;
 			}, $result
 		);
 	}
