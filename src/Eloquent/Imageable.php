@@ -6,6 +6,11 @@ use Fuzz\File\File;
 use Fuzz\LaravelS3\Facades\S3Manager;
 use Illuminate\Support\Facades\Input;
 
+/**
+ * Trait Imageable
+ *
+ * @package Fuzz\Data\Eloquent
+ */
 trait Imageable
 {
 	/**
