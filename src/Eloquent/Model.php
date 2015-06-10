@@ -73,6 +73,39 @@ abstract class Model extends Eloquent
 	}
 
 	/**
+	 * Cast as a float, unless null.
+	 *
+	 * @param mixed $value
+	 * @return null|float
+	 */
+	final protected function asFloat($value)
+	{
+		return is_null($value) ? $value : floatval($value);
+	}
+
+	/**
+	 * Cast as an int, unless null.
+	 *
+	 * @param mixed $value
+	 * @return null|int
+	 */
+	final protected function asInt($value)
+	{
+		return is_null($value) ? $value : intval($value);
+	}
+
+	/**
+	 * Cast as a string, unless null.
+	 *
+	 * @param mixed $value
+	 * @return null|string
+	 */
+	final protected function asString($value)
+	{
+		return is_null($value) ? $value : (string) $value;
+	}
+
+	/**
 	 * Return this model's fields.
 	 *
 	 * @return array
