@@ -102,7 +102,7 @@ abstract class Model extends Eloquent
 	 */
 	final protected function asString($value)
 	{
-		return is_null($value) ? $value : (string) $value;
+		return is_null($value) ? $value : strval($value);
 	}
 
 	/**
