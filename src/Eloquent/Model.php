@@ -109,7 +109,7 @@ abstract class Model extends Eloquent
 			}
 		}
 
-		return $this->with($relations);
+		$builder->with($relations);
 	}
 
 	/**
