@@ -10,6 +10,13 @@ use Illuminate\Database\Eloquent\Model as Eloquent;
 abstract class Model extends Eloquent
 {
 	/**
+	 * Whether we must paginate lists.
+	 *
+	 * @var bool
+	 */
+	const PAGINATE_LISTS = true;
+
+	/**
 	 * Add additional appended properties to the model via a public interface.
 	 *
 	 * @param string|array $appends
