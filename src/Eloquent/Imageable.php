@@ -86,6 +86,8 @@ trait Imageable
 				$input_variable, FILTER_VALIDATE_URL, FILTER_FLAG_SCHEME_REQUIRED & FILTER_FLAG_HOST_REQUIRED & FILTER_FLAG_PATH_REQUIRED
 			)) {
 				$file = S3Manager::uploadImageBlob(file_get_contents($input_variable), $image_directory, $crops);
+			} else {
+				$file = File::createFromBlob(base64_decode($input_variable));
 			}
 
 			// Reject nonimages or unparseable input
