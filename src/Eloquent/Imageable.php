@@ -87,7 +87,8 @@ trait Imageable
 			)) {
 				$file = S3Manager::uploadImageBlob(file_get_contents($input_variable), $image_directory, $crops);
 			} else {
-				$file = File::createFromBlob(base64_decode($input_variable));
+				$decoded = File::createFromBlob(base64_decode($input_variable));
+				$file = S3Manager::uploadImageFileObject($decoded, $image_directory, $crops);
 			}
 
 			// Reject nonimages or unparseable input
