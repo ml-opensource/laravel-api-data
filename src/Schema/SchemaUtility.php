@@ -21,6 +21,10 @@ class SchemaUtility
 			$connection = DB::connection();
 		}
 
+		if ($connection->getDriverName() === 'sqlite') {
+			return;
+		}
+
 		$connection->statement(
 			sprintf(
 				'ALTER TABLE `%s` COMMENT = "%s"', $table, addslashes($comment)
