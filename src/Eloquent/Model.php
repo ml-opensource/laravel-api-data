@@ -2,6 +2,7 @@
 
 namespace Fuzz\Data\Eloquent;
 
+use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Fuzz\Data\Schema\SchemaUtility;
 use Illuminate\Database\Eloquent\Builder;
@@ -10,11 +11,130 @@ use Illuminate\Database\Eloquent\Model as Eloquent;
 abstract class Model extends Eloquent
 {
 	/**
+	 * Model access rules
+	 *
+	 * @var array
+	 */
+	protected $access_rules = [];
+
+	/**
+	 * Model modification rules
+	 *
+	 * @var array
+	 */
+	protected $modify_rules = [];
+
+	/**
+	 * Access authorizer
+	 *
+	 * @var object
+	 */
+	protected $access_authorizer;
+
+	/**
+	 * Modification authorizer
+	 *
+	 * @var object
+	 */
+	protected $modify_authorizer;
+
+	/**
 	 * Whether we must paginate lists.
 	 *
 	 * @var bool
 	 */
 	const PAGINATE_LISTS = true;
+
+	/**
+	 * Boot parent and local logic
+	 *
+	 * @return void
+	 */
+	protected static function boot()
+	{
+		parent::boot();
+	}
+
+	/**
+	 * Set a given attribute on the model.
+	 *
+	 * @param  string  $key
+	 * @param  mixed   $value
+	 * @return mixed
+	 */
+	public function setAttribute($key, $value)
+	{
+		// First we will check for the presence of a mutator for the set operation
+		// which simply lets the developers tweak the attribute as it is set on
+		// the model, such as "json_encoding" an listing of data for storage.
+		if ($this->hasSetMutator($key)) {
+			$method = 'set'.Str::studly($key).'Attribute';
+
+			return $this->{$method}($value);
+		}
+
+		// If an attribute is listed as a "date", we'll convert it from a DateTime
+		// instance into a form proper for storage on the database tables using
+		// the connection grammar's date format. We will auto set the values.
+		elseif (in_array($key, $this->getDates()) && $value) {
+			$value = $this->fromDateTime($value);
+		}
+
+		// Only set if the user can currently access
+		if ($this->modify_authorizer->canAccess($key)) {
+			if ($this->isJsonCastable($key) && ! is_null($value)) {
+				$value = json_encode($value);
+			}
+
+			$this->attributes[$key] = $value;
+		}
+	}
+
+	/**
+	 * Constructor. Set up authorizers.
+	 */
+	public function __construct()
+	{
+		parent::__construct();
+
+		// Construct Authorizers
+		$authorizer = config('auth.authorizer');
+		$this->access_authorizer = new $authorizer($this->access_rules, $this);
+		$this->modify_authorizer = new $authorizer($this->modify_rules, $this);
+	}
+
+	/**
+	 * Convert the model instance to an array.
+	 *
+	 * @return array
+	 * @changed
+	 */
+	public function toArray()
+	{
+		$attributes = $this->filterAccessibleAttributes($this->attributesToArray());
+
+		return array_merge($attributes, $this->relationsToArray());
+	}
+
+	/**
+	 * Filter attributes which can and can't be accessed by the user
+	 *
+	 * @param array $attributes
+	 * @return array
+	 */
+	public function filterAccessibleAttributes(array $attributes)
+	{
+		$filtered = [];
+		foreach ($attributes as $key => $attribute) {
+			$accesible = $this->access_authorizer->canAccess($key);
+
+			if ($accesible) {
+				$filtered[$key] = $attribute;
+			}
+		}
+
+		return $filtered;
+	}
 
 	/**
 	 * Add additional appended properties to the model via a public interface.
