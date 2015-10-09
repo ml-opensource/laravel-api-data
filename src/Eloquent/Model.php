@@ -2,6 +2,7 @@
 
 namespace Fuzz\Data\Eloquent;
 
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Fuzz\Data\Schema\SchemaUtility;
@@ -39,6 +40,13 @@ abstract class Model extends Eloquent
 	protected $modify_authorizer;
 
 	/**
+	 * Determine if the app is running in the console (seeding, tinkering)
+	 *
+	 * @var bool
+	 */
+	protected $console_mode = false;
+
+	/**
 	 * Whether we must paginate lists.
 	 *
 	 * @var bool
@@ -58,8 +66,8 @@ abstract class Model extends Eloquent
 	/**
 	 * Set a given attribute on the model.
 	 *
-	 * @param  string  $key
-	 * @param  mixed   $value
+	 * @param  string $key
+	 * @param  mixed  $value
 	 * @return mixed
 	 */
 	public function setAttribute($key, $value)
@@ -68,7 +76,7 @@ abstract class Model extends Eloquent
 		// which simply lets the developers tweak the attribute as it is set on
 		// the model, such as "json_encoding" an listing of data for storage.
 		if ($this->hasSetMutator($key)) {
-			$method = 'set'.Str::studly($key).'Attribute';
+			$method = 'set' . Str::studly($key) . 'Attribute';
 
 			return $this->{$method}($value);
 		}
@@ -81,7 +89,7 @@ abstract class Model extends Eloquent
 		}
 
 		// Only set if the user can currently access
-		if ($this->modify_authorizer->canAccess($key)) {
+		if ($this->console_mode || $this->modify_authorizer->canAccess($key)) {
 			if ($this->isJsonCastable($key) && ! is_null($value)) {
 				$value = json_encode($value);
 			}
@@ -98,9 +106,10 @@ abstract class Model extends Eloquent
 		parent::__construct();
 
 		// Construct Authorizers
-		$authorizer = config('auth.authorizer');
+		$authorizer              = config('auth.authorizer');
 		$this->access_authorizer = new $authorizer($this->access_rules, $this);
 		$this->modify_authorizer = new $authorizer($this->modify_rules, $this);
+		$this->console_mode      = App::runningInConsole();
 	}
 
 	/**
@@ -111,7 +120,11 @@ abstract class Model extends Eloquent
 	 */
 	public function toArray()
 	{
-		$attributes = $this->filterAccessibleAttributes($this->attributesToArray());
+		if ($this->console_mode) {
+			$attributes = $this->attributesToArray();
+		} else {
+			$attributes = $this->filterAccessibleAttributes($this->attributesToArray());
+		}
 
 		return array_merge($attributes, $this->relationsToArray());
 	}
@@ -212,8 +225,8 @@ abstract class Model extends Eloquent
 			$relation_name        = $constraints_are_name ? $constraints : $name;
 
 			// Expand the dot-notation to see all relations
-			$nested_relations     = explode('.', $relation_name);
-			$model                = $builder->getModel();
+			$nested_relations = explode('.', $relation_name);
+			$model            = $builder->getModel();
 
 			foreach ($nested_relations as $index => $relation) {
 				if (method_exists($model, $relation)) {
