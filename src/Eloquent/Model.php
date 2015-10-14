@@ -324,4 +324,24 @@ abstract class Model extends Eloquent
 	{
 		return SchemaUtility::describeTable($this->getTable(), $this->getConnection());
 	}
+
+	/**
+	 * Return this model's access restrictions
+	 *
+	 * @return array
+	 */
+	public function getAccessRestrictions()
+	{
+		return $this->access_rules;
+	}
+
+	/**
+	 * Return this model's modify restrictions
+	 *
+	 * @return array
+	 */
+	public function getModifyRestrictions()
+	{
+		return $this->modify_rules;
+	}
 }
