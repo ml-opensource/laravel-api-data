@@ -113,23 +113,6 @@ abstract class Model extends Eloquent
 	}
 
 	/**
-	 * Convert the model instance to an array.
-	 *
-	 * @return array
-	 * @changed
-	 */
-	public function toArray()
-	{
-		if ($this->console_mode) {
-			$attributes = $this->attributesToArray();
-		} else {
-			$attributes = $this->filterAccessibleAttributes($this->attributesToArray());
-		}
-
-		return array_merge($attributes, $this->relationsToArray());
-	}
-
-	/**
 	 * Filter attributes which can and can't be accessed by the user
 	 *
 	 * @param array $attributes
