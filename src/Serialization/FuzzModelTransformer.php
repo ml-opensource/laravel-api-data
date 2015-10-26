@@ -15,6 +15,6 @@ class FuzzModelTransformer extends TransformerAbstract
 	 */
 	public function transform(Model $model)
 	{
-		return $model->filterAccessibleAttributes($model->toArray());
+		return $model->accessibleAttributesToArray();
 	}
 }

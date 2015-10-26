@@ -2,6 +2,7 @@
 
 namespace Fuzz\Data\Eloquent;
 
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -64,6 +65,20 @@ abstract class Model extends Eloquent
 	}
 
 	/**
+	 * Constructor. Set up authorizers.
+	 */
+	public function __construct()
+	{
+		parent::__construct();
+
+		// Construct Authorizers
+		$authorizer              = config('auth.authorizer');
+		$this->access_authorizer = new $authorizer($this->access_rules, $this);
+		$this->modify_authorizer = new $authorizer($this->modify_rules, $this);
+		$this->console_mode      = App::runningInConsole();
+	}
+
+	/**
 	 * Set a given attribute on the model.
 	 *
 	 * @param  string $key
@@ -99,33 +114,52 @@ abstract class Model extends Eloquent
 	}
 
 	/**
-	 * Constructor. Set up authorizers.
+	 * Filter attributes which can and can't be accessed by the user
+	 *
+	 * @return array
 	 */
-	public function __construct()
+	public function accessibleAttributesToArray()
 	{
-		parent::__construct();
+		$filtered = [];
+		$attributes = $this->getArrayableAttributes();
 
-		// Construct Authorizers
-		$authorizer              = config('auth.authorizer');
-		$this->access_authorizer = new $authorizer($this->access_rules, $this);
-		$this->modify_authorizer = new $authorizer($this->modify_rules, $this);
-		$this->console_mode      = App::runningInConsole();
+		foreach ($attributes as $key => $attribute) {
+			$accessible = $this->access_authorizer->canAccess($key);
+
+			if ($accessible) {
+				$filtered[$key] = $attribute;
+			}
+		}
+
+		return array_merge($filtered, $this->accessibleRelationsToArray());
 	}
 
 	/**
-	 * Filter attributes which can and can't be accessed by the user
+	 * Filter relations which can and can't be accessed by the user
 	 *
-	 * @param array $attributes
 	 * @return array
 	 */
-	public function filterAccessibleAttributes(array $attributes)
+	public function accessibleRelationsToArray()
 	{
 		$filtered = [];
-		foreach ($attributes as $key => $attribute) {
-			$accesible = $this->access_authorizer->canAccess($key);
+		$relations = $this->getArrayableRelations();
 
-			if ($accesible) {
-				$filtered[$key] = $attribute;
+		/**
+		 * @var $related \Illuminate\Database\Eloquent\Collection|\Illuminate\Database\Eloquent\Relations\Pivot
+		 */
+		foreach ($relations as $key => $related_collection) {
+			if (! $this->access_authorizer->canAccess($key)) {
+				continue;
+			}
+
+			if ($related_collection instanceof Pivot) {
+				// Access test done above
+				$filtered[$key] = $related_collection;
+				continue;
+			}
+
+			foreach ($related_collection as $index => $related) {
+				$filtered[$key][$index] = $related->accessibleAttributesToArray();
 			}
 		}
 
