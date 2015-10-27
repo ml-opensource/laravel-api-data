@@ -7,12 +7,7 @@
 			"email": "fuzzweb@fuzzproductions.com"
 		}
 	],
-	"repositories": [
-		{
-			"type": "vcs",
-			"url": "git@gitlab.fuzzhq.com:web-modules/laravel-s3.git"
-		}
-	],
+	"repositories": [],
 	"require": {
 		"php": ">=5.5.0",
 		"illuminate/support": "~5.0",
