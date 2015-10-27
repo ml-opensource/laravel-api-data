@@ -123,7 +123,7 @@ abstract class Model extends Eloquent
 	public function accessibleAttributesToArray()
 	{
 		$filtered = [];
-		$attributes = $this->getArrayableAttributes();
+		$attributes = $this->attributesToArray();
 
 		foreach ($attributes as $key => $attribute) {
 			$accessible = $this->access_authorizer->canAccess($key);
