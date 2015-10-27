@@ -2,6 +2,8 @@
 
 namespace Fuzz\Data\Eloquent;
 
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model as LaravelModel;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
@@ -158,8 +160,14 @@ abstract class Model extends Eloquent
 				continue;
 			}
 
-			foreach ($related_collection as $index => $related) {
-				$filtered[$key][$index] = $related->accessibleAttributesToArray();
+			// Many relation
+			if ($related_collection instanceof Collection) {
+				foreach ($related_collection as $index => $related) {
+					$filtered[$key][$index] = $related->accessibleAttributesToArray();
+				}
+			} elseif ($related_collection instanceof LaravelModel) {
+				// Single relation
+				$filtered[$key] = $related_collection->accessibleAttributesToArray();
 			}
 		}
 
