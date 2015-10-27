@@ -3,6 +3,7 @@
 namespace Fuzz\Data\Traits;
 
 use Fuzz\ApiServer\Exception\BadRequestException;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\File\File;
@@ -21,17 +22,29 @@ trait HasS3File
 	 *
 	 * Is this not working? Check your max file upload size in php.ini
 	 *
-	 * @param \Symfony\Component\HttpFoundation\File\File $file
-	 * @param null                                        $path
-	 * @param string                                      $visibility
-	 * @param bool                                        $random_name_length
+	 * @param \Symfony\Component\HttpFoundation\File\File|string $file
+	 * @param null                                               $path
+	 * @param string                                             $visibility
+	 * @param bool                                               $random_name_length
 	 * @return string
 	 * @throws \Fuzz\ApiServer\Exception\BadRequestException
 	 */
-	public function pushToS3(File $file, $path = null, $visibility = 'private', $random_name_length = false)
+	public function pushToS3($file, $path = null, $visibility = 'private', $random_name_length = false)
 	{
-		if (! $file->getSize()) {
-			throw new BadRequestException('The file could not be processed.', ['Possible issues' => ['The file is too large.', 'The file was not found.']]);
+		if (App::runningInConsole()) {
+			// If we're in console, don't check (for seeders)
+			return $file;
+		}
+
+		if (! $file->getSize() || ! ($file instanceof File)) {
+			throw new BadRequestException(
+				'The file could not be processed.', [
+					'Possible issues' => [
+						'The file is too large.',
+						'The file was not found.'
+					]
+				]
+			);
 		}
 
 		$filename = $random_name_length ? Str::random($random_name_length) . '.' . $file->guessExtension() :
