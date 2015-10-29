@@ -2,8 +2,8 @@
 
 namespace Fuzz\Data\Serialization;
 
+use Fuzz\ApiServer\Exception\NotImplementedException;
 use Fuzz\Data\Eloquent\Model;
-use Fuzz\Data\Traits\Exportable;
 use League\Fractal\TransformerAbstract;
 
 /**
@@ -18,12 +18,12 @@ class FuzzExportableModelTransformer extends TransformerAbstract
 	 *
 	 * @param \Fuzz\Data\Eloquent\Model $model
 	 * @return array
+	 * @throws \Fuzz\ApiServer\Exception\NotImplementedException
 	 */
 	public function transform(Model $model)
 	{
 		if (! method_exists($model, 'getCsvExportMap')) {
-			$exportable_trait = Exportable::class;
-			throw new \LogicException("This model does not support csv export serialization. Does it use the $exportable_trait trait?");
+			throw new NotImplementedException("This model does not support csv export serialization.");
 		}
 
 		return $this->buildRow($model->accessibleAttributesToArray(), $model->getCsvExportMap());
