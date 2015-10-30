@@ -38,7 +38,6 @@ class FuzzExportableModelTransformer extends TransformerAbstract
 	 */
 	protected function buildRow(array $row, array $column_mappings)
 	{
-		//$output = [];
 		$row_data = [];
 
 		// Map row data to columns
