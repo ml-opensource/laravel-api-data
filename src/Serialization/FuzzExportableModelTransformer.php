@@ -32,8 +32,9 @@ class FuzzExportableModelTransformer extends TransformerAbstract
 	/**
 	 * Pull out column mappings from the current row
 	 *
-	 * @param array $row
-	 * @param array $column_mappings
+	 * @param array                     $row
+	 * @param array                     $column_mappings
+	 * @param \Fuzz\Data\Eloquent\Model $model
 	 * @return array
 	 */
 	protected function buildRow(array $row, array $column_mappings, Model $model)
