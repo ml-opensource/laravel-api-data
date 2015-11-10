@@ -26,7 +26,7 @@ class FuzzExportableModelTransformer extends TransformerAbstract
 			throw new NotImplementedException("This model does not support csv export serialization.");
 		}
 
-		return $this->buildRow($model->accessibleAttributesToArray(), $model->getCsvExportMap());
+		return $this->buildRow($model->accessibleAttributesToArray(), $model->getCsvExportMap(), $model);
 	}
 
 	/**
@@ -36,9 +36,12 @@ class FuzzExportableModelTransformer extends TransformerAbstract
 	 * @param array $column_mappings
 	 * @return array
 	 */
-	protected function buildRow(array $row, array $column_mappings)
+	protected function buildRow(array $row, array $column_mappings, Model $model)
 	{
 		$row_data = [];
+
+		$mutators = isset($column_mappings['mutators']) ? $column_mappings['mutators'] : [];
+		unset($column_mappings['mutators']);
 
 		// Map row data to columns
 		foreach ($column_mappings as $column => $header) {
@@ -49,15 +52,40 @@ class FuzzExportableModelTransformer extends TransformerAbstract
 				$location = $row;
 
 				foreach ($path as $step) {
-					$location = isset($location[$step])? $location[$step] : null;
+					$location = isset($location[$step]) ? $location[$step] : null;
 				}
 
-				$row_data[$header] = $location;
+				$row_data[$header] = $this->getValue($location, $header, $model, $mutators);
 			} else {
-				$row_data[$header] = isset($row[$column]) ? $row[$column] : null;
+				$value             = isset($row[$column]) ? $row[$column] : null;
+				$row_data[$header] = $this->getValue($value, $header, $model, $mutators);
 			}
 		}
 
 		return $row_data;
+	}
+
+	/**
+	 * Apply mutators to get values
+	 *
+	 * @param string                    $value
+	 * @param string                    $header
+	 * @param \Fuzz\Data\Eloquent\Model $model
+	 * @param array                     $mutators
+	 * @return mixed
+	 */
+	protected function getValue($value, $header, $model, $mutators)
+	{
+		if (! isset($mutators[$header])) {
+			return $value;
+		}
+
+		$mutator = $mutators[$header];
+
+		if (! is_callable($mutator)) {
+			throw new \LogicException('The mutator is not callable. Check the ' . $header . ' mutator.');
+		}
+
+		return $mutator($value, $model);
 	}
 }
