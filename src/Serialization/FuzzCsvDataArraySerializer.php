@@ -21,6 +21,10 @@ class FuzzCsvDataArraySerializer extends DataArraySerializer
 	 */
 	public function collection($resourceKey, array $data)
 	{
+		if (count($data) === 0) {
+			return [];
+		}
+
 		// This infers the CSV headers and isn't perfect..
 		array_unshift($data, $this->buildCsvHeaders(array_keys($data[0])));
 		return $data;
