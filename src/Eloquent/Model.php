@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Fuzz\Data\Schema\SchemaUtility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model as Eloquent;
+use Fuzz\Agency\Authorizers\AttributeAuthorizer;
 
 abstract class Model extends Eloquent
 {
@@ -74,7 +75,7 @@ abstract class Model extends Eloquent
 		parent::__construct();
 
 		// Construct Authorizers
-		$authorizer              = config('auth.authorizer');
+		$authorizer              = config('auth.authorizer', AttributeAuthorizer::class);
 		$this->access_authorizer = new $authorizer($this->access_rules, $this);
 		$this->modify_authorizer = new $authorizer($this->modify_rules, $this);
 		$this->console_mode      = App::runningInConsole();
@@ -122,7 +123,7 @@ abstract class Model extends Eloquent
 	 */
 	public function accessibleAttributesToArray()
 	{
-		$filtered = [];
+		$filtered   = [];
 		$attributes = $this->attributesToArray();
 
 		foreach ($attributes as $key => $attribute) {
@@ -143,7 +144,7 @@ abstract class Model extends Eloquent
 	 */
 	public function accessibleRelationsToArray()
 	{
-		$filtered = [];
+		$filtered  = [];
 		$relations = $this->getArrayableRelations();
 
 		/**
