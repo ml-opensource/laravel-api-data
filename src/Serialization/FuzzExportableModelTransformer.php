@@ -2,8 +2,7 @@
 
 namespace Fuzz\Data\Serialization;
 
-use Fuzz\ApiServer\Exception\NotImplementedException;
-use Fuzz\Data\Eloquent\Model;
+use Illuminate\Database\Eloquent\Model;
 use League\Fractal\TransformerAbstract;
 
 /**
@@ -16,25 +15,24 @@ class FuzzExportableModelTransformer extends TransformerAbstract
 	/**
 	 * Transform the model into beautiful JSON
 	 *
-	 * @param \Fuzz\Data\Eloquent\Model $model
+	 * @param \Illuminate\Database\Eloquent\Model $model
 	 * @return array
-	 * @throws \Fuzz\ApiServer\Exception\NotImplementedException
 	 */
 	public function transform(Model $model)
 	{
 		if (! method_exists($model, 'getCsvExportMap')) {
-			throw new NotImplementedException("This model does not support csv export serialization.");
+			throw new \LogicException("This model does not support csv export serialization.");
 		}
 
-		return $this->buildRow($model->accessibleAttributesToArray(), $model->getCsvExportMap(), $model);
+		return $this->buildRow($model->toArray(), $model->getCsvExportMap(), $model);
 	}
 
 	/**
 	 * Pull out column mappings from the current row
 	 *
-	 * @param array                     $row
-	 * @param array                     $column_mappings
-	 * @param \Fuzz\Data\Eloquent\Model $model
+	 * @param array                               $row
+	 * @param array                               $column_mappings
+	 * @param \Illuminate\Database\Eloquent\Model $model
 	 * @return array
 	 */
 	protected function buildRow(array $row, array $column_mappings, Model $model)
@@ -69,13 +67,13 @@ class FuzzExportableModelTransformer extends TransformerAbstract
 	/**
 	 * Apply mutators to get values
 	 *
-	 * @param string                    $value
-	 * @param string                    $header
-	 * @param \Fuzz\Data\Eloquent\Model $model
-	 * @param array                     $mutators
+	 * @param string                              $value
+	 * @param string                              $header
+	 * @param \Illuminate\Database\Eloquent\Model $model
+	 * @param array                               $mutators
 	 * @return mixed
 	 */
-	protected function getValue($value, $header, $model, $mutators)
+	protected function getValue($value, $header, Model $model, $mutators)
 	{
 		if (! isset($mutators[$header])) {
 			return $value;
