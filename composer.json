@@ -1,6 +1,7 @@
 {
 	"name": "fuzz/laravel-data",
-	"description": "Scaffolding package for Laravel data.",
+	"description": "Scaffolding package for Laravel API models and data.",
+	"license": "MIT",
 	"authors": [
 		{
 			"name": "Fuzz Productions",

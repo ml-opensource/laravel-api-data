@@ -1,6 +1,6 @@
-## Fuzz Laravel Data Base
+## Fuzz Laravel Data
 
-The goal of this module is to provide model and scope boilerplate for common implementations of Laravel projects.
+Provides model and scope boilerplate for common implementations of Laravel API projects.
 
 ### Installation
 1. Register the custom Fuzz Composer repository: ```composer config repositories.fuzz composer https://satis.fuzzhq.com``` 
