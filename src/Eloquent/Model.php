@@ -2,34 +2,178 @@
 
 namespace Fuzz\Data\Eloquent;
 
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Model as LaravelModel;
+use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Str;
 use Carbon\Carbon;
-use Fuzz\File\File;
-use Fuzz\LaravelS3\Facades\S3Manager;
+use Fuzz\Data\Schema\SchemaUtility;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model as Eloquent;
-use Illuminate\Support\Facades\Input;
+use Fuzz\Agency\Authorizers\AttributeAuthorizer;
 
 abstract class Model extends Eloquent
 {
 	/**
-	 * The directory where assets are uploaded. Frequently overridden with late static binding.
-	 *
-	 * @var string
-	 */
-	const ASSET_DIRECTORY = 'assets';
-
-	/**
-	 * The directory where images are uploaded. Frequently overridden with late static binding.
-	 *
-	 * @var string
-	 */
-	const IMAGE_DIRECTORY = 'images';
-
-	/**
-	 * Storage for required fields.
+	 * Model access rules
 	 *
 	 * @var array
 	 */
-	public static $required_fields = [];
+	protected $access_rules = [];
+
+	/**
+	 * Model modification rules
+	 *
+	 * @var array
+	 */
+	protected $modify_rules = [];
+
+	/**
+	 * Access authorizer
+	 *
+	 * @var object
+	 */
+	protected $access_authorizer;
+
+	/**
+	 * Modification authorizer
+	 *
+	 * @var object
+	 */
+	protected $modify_authorizer;
+
+	/**
+	 * Determine if the app is running in the console (seeding, tinkering)
+	 *
+	 * @var bool
+	 */
+	protected $console_mode = false;
+
+	/**
+	 * Whether we must paginate lists.
+	 *
+	 * @var bool
+	 */
+	const PAGINATE_LISTS = true;
+
+	/**
+	 * Boot parent and local logic
+	 *
+	 * @return void
+	 */
+	protected static function boot()
+	{
+		parent::boot();
+	}
+
+	/**
+	 * Constructor. Set up authorizers.
+	 */
+	public function __construct()
+	{
+		parent::__construct();
+
+		// Construct Authorizers
+		$authorizer              = config('auth.authorizer', AttributeAuthorizer::class);
+		$this->access_authorizer = new $authorizer($this->access_rules, $this);
+		$this->modify_authorizer = new $authorizer($this->modify_rules, $this);
+		$this->console_mode      = App::runningInConsole();
+	}
+
+	/**
+	 * Set a given attribute on the model.
+	 *
+	 * @param  string $key
+	 * @param  mixed  $value
+	 * @return mixed
+	 */
+	public function setAttribute($key, $value)
+	{
+		// First we will check for the presence of a mutator for the set operation
+		// which simply lets the developers tweak the attribute as it is set on
+		// the model, such as "json_encoding" an listing of data for storage.
+		if ($this->hasSetMutator($key)) {
+			$method = 'set' . Str::studly($key) . 'Attribute';
+
+			return $this->{$method}($value);
+		}
+
+		// If an attribute is listed as a "date", we'll convert it from a DateTime
+		// instance into a form proper for storage on the database tables using
+		// the connection grammar's date format. We will auto set the values.
+		elseif (in_array($key, $this->getDates()) && $value) {
+			$value = $this->fromDateTime($value);
+		}
+
+		// Only set if the user can currently access
+		if ($this->console_mode || $this->modify_authorizer->canAccess($key)) {
+			if ($this->isJsonCastable($key) && ! is_null($value)) {
+				$value = json_encode($value);
+			}
+
+			$this->attributes[$key] = $value;
+		}
+	}
+
+	/**
+	 * Filter attributes which can and can't be accessed by the user
+	 *
+	 * @return array
+	 */
+	public function accessibleAttributesToArray()
+	{
+		$filtered   = [];
+		$attributes = $this->attributesToArray();
+
+		foreach ($attributes as $key => $attribute) {
+			$accessible = $this->access_authorizer->canAccess($key);
+
+			if ($accessible) {
+				$filtered[$key] = $attribute;
+			}
+		}
+
+		return array_merge($filtered, $this->accessibleRelationsToArray());
+	}
+
+	/**
+	 * Filter relations which can and can't be accessed by the user
+	 *
+	 * @return array
+	 */
+	public function accessibleRelationsToArray()
+	{
+		$filtered  = [];
+		$relations = $this->getArrayableRelations();
+
+		/**
+		 * @var $related \Illuminate\Database\Eloquent\Collection|\Illuminate\Database\Eloquent\Relations\Pivot
+		 */
+		foreach ($relations as $key => $related_collection) {
+			if (! $this->access_authorizer->canAccess($key)) {
+				continue;
+			}
+
+			if ($related_collection instanceof Pivot) {
+				// Access test done above
+				$filtered[$key] = $related_collection;
+				continue;
+			}
+
+			// Many relation
+			if ($related_collection instanceof Collection) {
+				foreach ($related_collection as $index => $related) {
+					$filtered[$key][$index] = $related->accessibleAttributesToArray();
+				}
+			} elseif ($related_collection instanceof LaravelModel) {
+				// Single relation
+				$filtered[$key] = $related_collection->accessibleAttributesToArray();
+			}
+		}
+
+		return $filtered;
+	}
 
 	/**
 	 * Add additional appended properties to the model via a public interface.
@@ -49,9 +193,26 @@ abstract class Model extends Eloquent
 	}
 
 	/**
-	 * Unhide hidden properties from the model via a public interface.
+	 * Remove appended properties to the model via a public interface.
 	 *
 	 * @param string|array $appends
+	 * @return static
+	 */
+	public function removeAppends($appends)
+	{
+		if (is_string($appends)) {
+			$appends = func_get_args();
+		}
+
+		$this->appends = array_diff($this->appends, $appends);
+
+		return $this;
+	}
+
+	/**
+	 * Unhide hidden properties from the model via a public interface.
+	 *
+	 * @param string|array $hidden
 	 * @return static
 	 */
 	public function removeHidden($hidden)
@@ -66,73 +227,55 @@ abstract class Model extends Eloquent
 	}
 
 	/**
-	 * Mutator for image attributes.
+	 * "Safe" version of with eager-loading.
 	 *
-	 * @param  string|File $input_variable
-	 *         Either a file input name, a local file path, a web URL to a valid image,
-	 *         or a constructed File object
-	 * @param  string      $attribute
-	 *         The name of the attribute we're setting
-	 * @param  string      $crops
-	 *         An optional crop spec to crop to
-	 * @return string
-	 */
-	final protected function mutateImageAttribute($input_variable, $attribute, $crops = false)
-	{
-		// If the input variable is already an MD5, assume it is already on S3 with reasonable certainty
-		$image_directory_string = static::getImageDirectoryString();
-		if (! (is_string($input_variable) && preg_match(sprintf('#%s/[0-9a-f]{32}(_\w+)?\.[a-z]{3,4}$#', $image_directory_string), $input_variable))) {
-			$image_directory = static::getImageDirectory();
-
-			// Accept constructed File objects
-			if (is_object($input_variable) && $input_variable instanceof File) {
-				$file = S3Manager::uploadImageFileObject($input_variable, $image_directory, $crops);
-				// Accept multipart file uploads exposed to PHP
-			} elseif (Input::hasFile($input_variable)) {
-				$file = S3Manager::uploadImage($input_variable, $image_directory, $crops);
-				// Accept local file paths
-			} elseif (file_exists($input_variable)) {
-				$file = S3Manager::uploadImageFile($input_variable, $image_directory, $crops);
-				// Accept fully qualified URLs to images
-			} elseif (filter_var(
-				$input_variable, FILTER_VALIDATE_URL, FILTER_FLAG_SCHEME_REQUIRED & FILTER_FLAG_HOST_REQUIRED & FILTER_FLAG_PATH_REQUIRED
-			)) {
-				$file = S3Manager::uploadImageBlob(file_get_contents($input_variable), $image_directory, $crops);
-			}
-
-			// Reject nonimages or unparseable input
-			if (! isset($file) || ! $file->isImage()) {
-				return false;
-			}
-
-			// Set the value of the file to the unqualified URL of the filename
-			return $this->attributes[$attribute] = $file->getFullFilename();
-		}
-
-		// Use basename to ensure we are not embedding S3 URLs in the database on re-save
-		return $this->attributes[$attribute] = basename($input_variable);
-	}
-
-	/**
-	 * Accessor for image attributes.
+	 * Checks if relations exist before loading them.
 	 *
-	 * @param  string $filename
-	 *         The name of the file in storage
-	 * @return string
-	 *         The fully qualified S3 URL to the image
+	 * @param \Illuminate\Database\Eloquent\Builder $builder
+	 * @param string|array                          $relations
 	 */
-	final protected function accessImageAttribute($filename, $crop = null)
+	public function scopeSafeWith(Builder $builder, $relations)
 	{
-		if (empty($filename)) {
-			return null;
+		if (is_string($relations)) {
+			$relations = func_get_args();
+			array_shift($relations);
 		}
 
-		if (! is_null($crop)) {
-			$path_parts = pathinfo($filename);
-			$filename   = @$path_parts['filename'] . '_' . $crop . '.' . $path_parts['extension'];
+		// Loop through all relations to check for valid relationship signatures
+		foreach ($relations as $name => $constraints) {
+			// Constraints may be passed in either form:
+			// 2 => 'relation.nested'
+			// or
+			// 'relation.nested' => function() { ... }
+			$constraints_are_name = is_numeric($name);
+			$relation_name        = $constraints_are_name ? $constraints : $name;
+
+			// Expand the dot-notation to see all relations
+			$nested_relations = explode('.', $relation_name);
+			$model            = $builder->getModel();
+
+			foreach ($nested_relations as $index => $relation) {
+				if (method_exists($model, $relation)) {
+					// Iterate through relations if they actually exist
+					$model = $model->$relation()->getRelated();
+				} elseif ($index > 0) {
+					// If we found any valid relations, pass them through
+					$safe_relation = implode('.', array_slice($nested_relations, 0, $index));
+					if ($constraints_are_name) {
+						$relations[$name] = $safe_relation;
+					} else {
+						unset($relations[$name]);
+						$relations[$safe_relation] = $constraints;
+					}
+				} else {
+					// If we didn't, remove this relation specification
+					unset($relations[$name]);
+					break;
+				}
+			}
 		}
 
-		return S3Manager::getUrl($filename, static::getImageDirectory(), true);
+		$builder->with($relations);
 	}
 
 	/**
@@ -166,43 +309,65 @@ abstract class Model extends Eloquent
 	}
 
 	/**
-	 * Return an Fuzz\S3\Conveyor-compatible array of directory keys for storing
-	 * and retrieving images. With late static binding, we can arbitrarily override
-	 * the directory components used here.
+	 * Cast as a float, unless null.
 	 *
-	 * @param  string $subdirectory an optional subdirectory
-	 * @return array  a collection of subdirectory components
+	 * @param mixed $value
+	 * @return null|float
 	 */
-	public static function getImageDirectory($subdirectory = null)
+	final protected function asFloat($value)
 	{
-		return [
-			static::ASSET_DIRECTORY,
-			$subdirectory,
-			static::IMAGE_DIRECTORY
-		];
+		return is_null($value) ? $value : floatval($value);
 	}
 
 	/**
-	 * Return a string-representation of the Fuzz\S3\Conveyor-compatible array
-	 * of directory keys for storing and retrieving images.
+	 * Cast as an int, unless null.
 	 *
-	 * @param  string $subdirectory an optional subdirectory
-	 * @return string a string representing the path to the image directory
+	 * @param mixed $value
+	 * @return null|int
 	 */
-	public static function getImageDirectoryString($subdirectory = null)
+	final protected function asInt($value)
 	{
-		$directory_parts = static::getImageDirectory();
-
-		return implode('/', array_filter($directory_parts));
+		return is_null($value) ? $value : intval($value);
 	}
 
 	/**
-	 * Starter query for index presentation of data.
+	 * Cast as a string, unless null.
 	 *
-	 * @return \Illuminate\Database\Eloquent\Builder
+	 * @param mixed $value
+	 * @return null|string
 	 */
-	public static function indexQuery()
+	final protected function asString($value)
 	{
-		return static::query();
+		return is_null($value) ? $value : strval($value);
+	}
+
+	/**
+	 * Return this model's fields.
+	 *
+	 * @return array
+	 */
+	final public function getFields()
+	{
+		return SchemaUtility::describeTable($this->getTable(), $this->getConnection());
+	}
+
+	/**
+	 * Return this model's access restrictions
+	 *
+	 * @return array
+	 */
+	public function getAccessRestrictions()
+	{
+		return $this->access_rules;
+	}
+
+	/**
+	 * Return this model's modify restrictions
+	 *
+	 * @return array
+	 */
+	public function getModifyRestrictions()
+	{
+		return $this->modify_rules;
 	}
 }
