@@ -3,6 +3,7 @@
 
 namespace Fuzz\Data\Traits;
 
+use Fuzz\Data\Transformations\Serialization\DefaultModelTransformer;
 use Fuzz\Data\Transformations\TransformationFactory;
 use League\Fractal\Serializer\SerializerAbstract;
 use League\Fractal\TransformerAbstract;
@@ -16,6 +17,13 @@ use League\Fractal\TransformerAbstract;
  */
 trait Transformations
 {
+	/**
+	 * Controller transformer
+	 *
+	 * @var string
+	 */
+	public $transformer = DefaultModelTransformer::class;
+
 	/**
 	 * Shortcut method for serializing and transforming an entity.
 	 *
