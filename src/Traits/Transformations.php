@@ -19,9 +19,9 @@ trait Transformations
 	/**
 	 * Shortcut method for serializing and transforming an entity.
 	 *
-	 * @param                                    $entity
-	 * @param TransformerAbstract|callable| null $transformer
-	 * @param SerializerAbstract|null            $serializer
+	 * @param                                          $entity
+	 * @param TransformerAbstract|callable|string|null $transformer
+	 * @param SerializerAbstract|null                  $serializer
 	 *
 	 * @return array
 	 */
@@ -29,25 +29,13 @@ trait Transformations
 	{
 		$transformer = $transformer ?: $this->getTransformerFromClassProperty();
 
-		$results = $this->transform()
-			->resourceWith($entity, $transformer)
-			->usingPaginatorIfPaged();
+		$results = $this->transform()->resourceWith($entity, $transformer)->usingPaginatorIfPaged();
 
 		if ($serializer) {
 			return $results->serialize($serializer);
 		}
 
 		return $results->serialize();
-	}
-
-	/**
-	 * Creates a new TransformationFactory
-	 *
-	 * @return TransformationFactory
-	 */
-	public function transform(): TransformationFactory
-	{
-		return new TransformationFactory();
 	}
 
 	/**
@@ -64,8 +52,8 @@ trait Transformations
 		}
 
 
-		return (is_a($this->transformer, TransformerAbstract::class, true) && ! is_object($this->transformer))
-			? new $this->transformer : $this->transformer;
+		return (is_a($this->transformer, TransformerAbstract::class, true) && ! is_object($this->transformer)) ?
+			new $this->transformer : $this->transformer;
 	}
 
 	/**
@@ -78,5 +66,15 @@ trait Transformations
 	protected function isTransformer($transformer)
 	{
 		return is_a($transformer, TransformerAbstract::class, true) || is_callable($transformer);
+	}
+
+	/**
+	 * Creates a new TransformationFactory
+	 *
+	 * @return TransformationFactory
+	 */
+	public function transform(): TransformationFactory
+	{
+		return new TransformationFactory();
 	}
 }
