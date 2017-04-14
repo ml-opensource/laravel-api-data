@@ -10,7 +10,7 @@
 	],
 	"repositories": [],
 	"require": {
-		"php": ">=5.5.0",
+		"php": ">=7.0",
 		"laravel/framework": "5.3.*",
 		"illuminate/support": "~5.0",
 		"illuminate/database": "~5.0",
