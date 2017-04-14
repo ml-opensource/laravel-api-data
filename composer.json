@@ -11,13 +11,19 @@
 	"repositories": [],
 	"require": {
 		"php": ">=5.5.0",
+		"laravel/framework": "5.3.*",
 		"illuminate/support": "~5.0",
 		"illuminate/database": "~5.0",
-		"league/fractal": "^0.13.0@dev"
+		"league/fractal": "^0.14.0"
+	},
+	"require-dev": {
+		"mockery/mockery": "0.9.*",
+		"phpunit/phpunit": "~5.6"
 	},
 	"autoload": {
 		"psr-4": {
-			"Fuzz\\Data\\": "src/"
+			"Fuzz\\Data\\": "src/",
+			"Fuzz\\Data\\Tests\\": "tests/"
 		}
 	}
 }
