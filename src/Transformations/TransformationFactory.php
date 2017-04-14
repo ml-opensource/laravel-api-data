@@ -96,12 +96,12 @@ class TransformationFactory
 	 * @param TransformerAbstract|callable $transformer
 	 * @param null|mixed                   $key
 	 *
-	 * @return $this
+	 * @return \Fuzz\Data\Transformations\TransformationFactory
 	 */
-	public function resourceWith($entity, $transformer, $key = null)
+	public function resourceWith($entity, $transformer, $key = null): TransformationFactory
 	{
 		// if collection, paginator, or array with first value being an array use collection resource.
-		if ((is_array($entity) && is_array($entity[0])) || $entity instanceof LaravelCollection || $entity instanceof LengthAwarePaginator) {
+		if ((is_array($entity) && isset($entity[0]) && is_array($entity[0])) || $entity instanceof LaravelCollection || $entity instanceof LengthAwarePaginator) {
 			return $this->collectionWith($entity, $transformer, $key);
 		}
 
@@ -115,9 +115,9 @@ class TransformationFactory
 	 * @param TransformerAbstract|callable $transformer
 	 * @param null|mixed                   $key
 	 *
-	 * @return $this
+	 * @return \Fuzz\Data\Transformations\TransformationFactory
 	 */
-	public function collectionWith($entity, $transformer, $key = null)
+	public function collectionWith($entity, $transformer, $key = null): TransformationFactory
 	{
 		$this->entity      = $entity;
 		$this->transformer = $transformer;
@@ -133,9 +133,9 @@ class TransformationFactory
 	 * @param TransformerAbstract|callable $transformer
 	 * @param null|mixed                   $key
 	 *
-	 * @return $this
+	 * @return \Fuzz\Data\Transformations\TransformationFactory
 	 */
-	public function itemWith($entity, $transformer, $key = null)
+	public function itemWith($entity, $transformer, $key = null): TransformationFactory
 	{
 		$this->entity      = $entity;
 		$this->transformer = $transformer;
@@ -179,9 +179,9 @@ class TransformationFactory
 	 * Determines if the set data is paged, if so it will apply the
 	 * `usingPaginator()` method, if not it will just continue.
 	 *
-	 * @return $this
+	 * @return \Fuzz\Data\Transformations\TransformationFactory
 	 */
-	public function usingPaginatorIfPaged()
+	public function usingPaginatorIfPaged(): TransformationFactory
 	{
 		if ($this->resource instanceof Collection && $this->entity instanceof LengthAwarePaginator) {
 			return $this->usingPaginator();
@@ -197,9 +197,9 @@ class TransformationFactory
 	 *
 	 * @throws \InvalidArgumentException
 	 *
-	 * @return $this
+	 * @return \Fuzz\Data\Transformations\TransformationFactory
 	 */
-	public function usingPaginator($paginator = null)
+	public function usingPaginator($paginator = null): TransformationFactory
 	{
 		if (! ($this->resource instanceof Collection) || ! ($this->entity instanceof LengthAwarePaginator)) {
 			throw new \InvalidArgumentException('Bad Request Issued');
