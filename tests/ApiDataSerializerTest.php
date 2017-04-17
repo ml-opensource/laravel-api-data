@@ -3,8 +3,12 @@
 namespace Fuzz\Data\Tests;
 
 use Fuzz\Data\Transformations\Serialization\ApiDataSerializer;
+use Illuminate\Pagination\AbstractPaginator;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Request;
 use League\Fractal\Pagination\IlluminatePaginatorAdapter;
+use League\Fractal\Pagination\PaginatorInterface;
+use Mockery;
 
 class ApiDataSerializerTest extends TestCase
 {
@@ -53,9 +57,7 @@ class ApiDataSerializerTest extends TestCase
 			'id' => 1,
 		];
 
-		$this->paginatedCollection = new IlluminatePaginatorAdapter(
-			new LengthAwarePaginator($this->collection, count($this->collection), count($this->collection))
-		);
+		$this->paginatedCollection = new IlluminatePaginatorAdapter(new LengthAwarePaginator($this->collection, count($this->collection), count($this->collection)));
 	}
 
 	/**
@@ -97,15 +99,42 @@ class ApiDataSerializerTest extends TestCase
 	 */
 	public function testPaginator()
 	{
-		$paginator = $this->serializer->paginator($this->paginatedCollection);
+		$paginator          = Mockery::mock(PaginatorInterface::class);
+		$abstract_paginator = Mockery::mock(AbstractPaginator::class);
+		$request            = Mockery::mock(\Illuminate\Http\Request::class);
 
-		$this->assertArrayHasKey('pagination', $paginator);
-		$this->assertArraySubset(['page', 'total', 'per_page', 'total_pages'], array_keys($paginator['pagination']));
+		$paginator->shouldReceive('getCurrentPage')->once()->andReturn(3);
+		$paginator->shouldReceive('getLastPage')->once()->andReturn(10);
+		$paginator->shouldReceive('getTotal')->once()->andReturn(100);
+		$paginator->shouldReceive('getCount')->once()->andReturn(100);
+		$paginator->shouldReceive('getPerPage')->once()->andReturn(10);
+		$paginator->shouldReceive('getPaginator')->once()->andReturn($abstract_paginator);
 
-		$this->assertArraySubset([
+		$abstract_paginator->shouldReceive('addQuery')->once()->with(ApiDataSerializer::PAGINATION_PER_PAGE, 10);
+		$abstract_paginator->shouldReceive('perPage')->once()->andReturn(10);
+
+		$paginator->shouldReceive('getUrl')->once()->with(2)->andReturn('foo');
+		$paginator->shouldReceive('getUrl')->once()->with(4)->andReturn('bar');
+
+		Request::shouldReceive('instance')->once()->andReturn($request);
+		$request->query = $request;
+		$request->shouldReceive('all')->andReturn([]);
+
+		$pagination = $this->serializer->paginator($paginator);
+
+		$this->assertArrayHasKey('pagination', $pagination);
+		$this->assertSame([
 			'pagination' => [
-				'page' => 1, 'total' => 3, 'per_page' => 3, 'total_pages' => 1,
+				'total'        => 100,
+				'count'        => 100,
+				'per_page'     => 10,
+				'current_page' => 3,
+				'total_pages'  => 10,
+				'links'        => [
+					'next'     => 'bar',
+					'previous' => 'foo',
+				],
 			],
-		], $paginator);
+		], $pagination);
 	}
 }
