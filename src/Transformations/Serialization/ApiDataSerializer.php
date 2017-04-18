@@ -1,13 +1,13 @@
 <?php
 
-namespace Fuzz\Data\Serialization;
+namespace Fuzz\Data\Transformations\Serialization;
 
-use Illuminate\Pagination\AbstractPaginator;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Pagination\AbstractPaginator;
 use League\Fractal\Pagination\PaginatorInterface;
-use League\Fractal\Serializer\DataArraySerializer;
+use League\Fractal\Serializer\DataArraySerializer as FractalSerializer;
 
-class FuzzDataArraySerializer extends DataArraySerializer
+class ApiDataSerializer extends FractalSerializer
 {
 	/**
 	 * Parameter name for pagination controller: items per page.
@@ -15,24 +15,12 @@ class FuzzDataArraySerializer extends DataArraySerializer
 	 * @var string
 	 */
 	const PAGINATION_PER_PAGE = 'per_page';
-
 	/**
 	 * Parameter name for pagination controller: current page.
 	 *
 	 * @var string
 	 */
 	const PAGINATION_CURRENT_PAGE = 'page';
-
-	/**
-	 * Class constructor
-	 *
-	 * @param string|null $baseUrl
-	 */
-	public function __construct($baseUrl = null)
-	{
-		$this->baseUrl = $baseUrl;
-		$this->rootObjects = [];
-	}
 
 	/**
 	 * Serialize a collection.
@@ -42,7 +30,7 @@ class FuzzDataArraySerializer extends DataArraySerializer
 	 *
 	 * @return array
 	 */
-	public function collection($resourceKey, array $data)
+	public function collection($resourceKey, array $data): array
 	{
 		return ['data' => $data];
 	}
@@ -55,7 +43,7 @@ class FuzzDataArraySerializer extends DataArraySerializer
 	 *
 	 * @return array
 	 */
-	public function item($resourceKey, array $data)
+	public function item($resourceKey, array $data): array
 	{
 		return ['data' => $data];
 	}
@@ -70,18 +58,18 @@ class FuzzDataArraySerializer extends DataArraySerializer
 	public function paginator(PaginatorInterface $paginator)
 	{
 		$currentPage = (int) $paginator->getCurrentPage();
-		$lastPage = (int) $paginator->getLastPage();
+		$lastPage    = (int) $paginator->getLastPage();
 
 		$pagination = [
-			'total' => (int) $paginator->getTotal(),
-			'count' => (int) $paginator->getCount(),
-			'per_page' => (int) $paginator->getPerPage(),
+			'total'        => (int) $paginator->getTotal(),
+			'count'        => (int) $paginator->getCount(),
+			'per_page'     => (int) $paginator->getPerPage(),
 			'current_page' => $currentPage,
-			'total_pages' => $lastPage,
+			'total_pages'  => $lastPage,
 		];
 
 		$pagination['links'] = [
-			'next' => null,
+			'next'     => null,
 			'previous' => null,
 		];
 
@@ -117,7 +105,6 @@ class FuzzDataArraySerializer extends DataArraySerializer
 		) {
 			$paginator->addQuery($key, $value);
 		}
-
 		// Add our "per page" pagination parameter to the constructed URLs
 		$paginator->addQuery(self::PAGINATION_PER_PAGE, $paginator->perPage());
 	}
