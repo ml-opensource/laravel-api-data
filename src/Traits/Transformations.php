@@ -29,18 +29,19 @@ trait Transformations
 	 *
 	 * @param                                          $entity
 	 * @param TransformerAbstract|callable|string|null $transformer
-	 * @param SerializerAbstract|null                  $serializer
+	 * @param SerializerAbstract|callable|string|null  $serializer
 	 *
 	 * @return array
 	 */
-	public function transformEntity($entity, $transformer = null, SerializerAbstract $serializer = null): array
+	public function transformEntity($entity, $transformer = null, $serializer = null): array
 	{
-		$transformer = $transformer ?: $this->getTransformerFromClassProperty();
+		$transformer = is_null($transformer) ? $this->getTransformerFromClassProperty() :
+			$this->getOrBuildTransformer($transformer);
 
-		$results = $this->transform()->resourceWith($entity, $transformer)->usingPaginatorIfPaged();
+		$results = $this->transformationFactory()->resourceWith($entity, $transformer)->usingPaginatorIfPaged();
 
 		if ($serializer) {
-			return $results->serialize($serializer);
+			return $results->serialize($this->getOrBuildSerializer($serializer));
 		}
 
 		return $results->serialize();
@@ -60,14 +61,13 @@ trait Transformations
 		}
 
 
-		return (is_a($this->transformer, TransformerAbstract::class, true) && ! is_object($this->transformer)) ?
-			new $this->transformer : $this->transformer;
+		return $this->getOrBuildTransformer($this->transformer);
 	}
 
 	/**
 	 * Checks if it is a valid transformer.
 	 *
-	 * @param $transformer
+	 * @param TransformerAbstract|callable|string $transformer
 	 *
 	 * @return bool
 	 */
@@ -77,12 +77,56 @@ trait Transformations
 	}
 
 	/**
+	 * Build or return an instance of a tranformer
+	 *
+	 * @param TransformerAbstract|callable|string $transformer
+	 *
+	 * @return \League\Fractal\TransformerAbstract
+	 */
+	protected function getOrBuildTransformer($transformer): TransformerAbstract
+	{
+		if (! $this->isTransformer($transformer)) {
+			throw new \InvalidArgumentException('You cannot transform the entity without providing a valid Transformer. Verify your transformer extends ' . TransformerAbstract::class);
+		}
+
+		return ! is_object($transformer) ? new $transformer : $transformer;
+	}
+
+	/**
 	 * Creates a new TransformationFactory
 	 *
 	 * @return TransformationFactory
 	 */
-	public function transform(): TransformationFactory
+	public function transformationFactory(): TransformationFactory
 	{
 		return new TransformationFactory();
+	}
+
+	/**
+	 * Build or return an instance of a serializer
+	 *
+	 * @param SerializerAbstract|callable|string $serializer
+	 *
+	 * @return \League\Fractal\Serializer\SerializerAbstract
+	 */
+	protected function getOrBuildSerializer($serializer): SerializerAbstract
+	{
+		if (! $this->isSerializer($serializer)) {
+			throw new \InvalidArgumentException('You cannot transform the entity without providing a valid Serializer. Verify your serializer extends ' . SerializerAbstract::class);
+		}
+
+		return ! is_object($serializer) ? new $serializer : $serializer;
+	}
+
+	/**
+	 * Checks if it is a valid serializer.
+	 *
+	 * @param SerializerAbstract|callable|string $serializer
+	 *
+	 * @return bool
+	 */
+	protected function isSerializer($serializer)
+	{
+		return is_a($serializer, SerializerAbstract::class, true) || is_callable($serializer);
 	}
 }
