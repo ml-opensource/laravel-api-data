@@ -18,11 +18,14 @@ use League\Fractal\TransformerAbstract;
 trait Transformations
 {
 	/**
-	 * Controller transformer
+	 * The transformer to use for the class.
 	 *
-	 * @var string
+	 * @return string | TransformerAbstract
 	 */
-	public $transformer = DefaultModelTransformer::class;
+	public function getTransformerClass()
+	{
+		return $this->transformer ?? DefaultModelTransformer::class;
+	}
 
 	/**
 	 * Shortcut method for serializing and transforming an entity.
@@ -35,7 +38,7 @@ trait Transformations
 	 */
 	public function transformEntity($entity, $transformer = null, SerializerAbstract $serializer = null): array
 	{
-		$transformer = $transformer ?: $this->getTransformerFromClassProperty();
+		$transformer = $transformer ?: $this->getTransformerForClass();
 
 		$results = $this->transform()->resourceWith($entity, $transformer)->usingPaginatorIfPaged();
 
@@ -53,15 +56,17 @@ trait Transformations
 	 *
 	 * @return TransformerAbstract
 	 */
-	protected function getTransformerFromClassProperty()
+	protected function getTransformerForClass()
 	{
-		if (! isset($this->transformer) || ! $this->isTransformer($this->transformer)) {
+		$transformer = $this->getTransformerClass();
+
+		if (! $this->isTransformer($transformer)) {
 			throw new \InvalidArgumentException('You cannot transform the entity without providing a valid Transformer. Verify your transformer extends ' . TransformerAbstract::class);
 		}
 
 
-		return (is_a($this->transformer, TransformerAbstract::class, true) && ! is_object($this->transformer)) ?
-			new $this->transformer : $this->transformer;
+		return (is_a($transformer, TransformerAbstract::class, true) && ! is_object($transformer)) ?
+			new $transformer : $transformer;
 	}
 
 	/**
