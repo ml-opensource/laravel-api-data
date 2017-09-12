@@ -7,7 +7,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
-class TransformationFactoryTest extends TestCase
+class TransformationFactoryTest extends ApplicationTestCase
 {
 
 	/**
