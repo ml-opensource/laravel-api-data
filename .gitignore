@@ -2,3 +2,4 @@
 /components
 composer.phar
 .DS_Store
+tests/coverage
