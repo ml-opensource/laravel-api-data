@@ -3,6 +3,7 @@
 namespace Fuzz\Data\Tests;
 
 use Fuzz\Data\Traits\Transformations;
+use Fuzz\Data\Transformations\Serialization\DefaultArrayTransformer;
 use Fuzz\Data\Transformations\Serialization\DefaultModelTransformer;
 use Fuzz\Data\Transformations\Serialization\SimpleArraySerializer;
 use Fuzz\Data\Transformations\TransformationFactory;
@@ -36,7 +37,7 @@ class TransformationsTest extends TestCase
 	 */
 	public function testTransform()
 	{
-		$this->assertInstanceOf(TransformationFactory::class, $this->trait->transform());
+		$this->assertInstanceOf(TransformationFactory::class, $this->trait->transformationFactory());
 	}
 
 	/**
@@ -46,7 +47,7 @@ class TransformationsTest extends TestCase
 	 */
 	public function testCanTransformEntity()
 	{
-		$transformed = $this->trait->transformEntity([[1, 2, 3, 4, 5]], 'array_values', new SimpleArraySerializer);
+		$transformed = $this->trait->transformEntity([[1, 2, 3, 4, 5]], DefaultArrayTransformer::class, new SimpleArraySerializer);
 
 		$this->assertTrue(is_array($transformed));
 		$this->assertEquals([[1, 2, 3, 4, 5]], $transformed);
@@ -78,7 +79,7 @@ class TransformationsTest extends TestCase
 	 */
 	public function testCanGetTransformerFromClassPropertyAsCallable()
 	{
-		$this->trait->transformer = 'array_values';
+		$this->trait->transformer = DefaultArrayTransformer::class;
 
 		$transformed = $this->trait->transformEntity([1, 2, 3, 4, 5]);
 
@@ -97,5 +98,29 @@ class TransformationsTest extends TestCase
 		$this->trait->transformer = 'InvalidArg!';
 
 		$this->trait->transformEntity([1, 2, 3, 4, 5]);
+	}
+
+	/**
+	 * @test
+	 *
+	 * Will throw InvalidArgumentException when trying to use invalid transformer
+	 */
+	public function testItThrowsInvalidArgumentExceptionIfIsNotAValidTransformer()
+	{
+		$this->expectException(InvalidArgumentException::class);
+
+		$this->trait->transformEntity([1, 2, 3, 4, 5], self::class);
+	}
+
+	/**
+	 * @test
+	 *
+	 * Will throw InvalidArgumentException when trying to use invalid serializer
+	 */
+	public function testItThrowsInvalidArgumentExceptionIfIsNotAValidSerializer()
+	{
+		$this->expectException(InvalidArgumentException::class);
+
+		$this->trait->transformEntity([1, 2, 3, 4, 5], DefaultArrayTransformer::class, self::class);
 	}
 }
