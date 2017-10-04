@@ -29,7 +29,7 @@ abstract class BaseModelTransformer extends TransformerAbstract implements Relat
 	public function transform(Model $model): array
 	{
 		// Serialize
-		$arrayed_model = $model->toArray();
+		$arrayed_model = $model->attributesToArray();
 
 		return array_merge($arrayed_model, $this->processRelations($model));
 	}
