@@ -2,6 +2,7 @@
 
 namespace Fuzz\Data\Transformations\Serialization;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Request;
 use Illuminate\Pagination\AbstractPaginator;
 use League\Fractal\Pagination\PaginatorInterface;
@@ -96,7 +97,7 @@ class ApiDataSerializer extends FractalSerializer
 	{
 		// Pass in any additional query variables
 		foreach (
-			array_except(
+			Arr::except(
 				Request::instance()->query->all(), [
 					self::PAGINATION_CURRENT_PAGE,
 					self::PAGINATION_PER_PAGE
