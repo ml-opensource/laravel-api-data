@@ -110,7 +110,7 @@ class ApiDataSerializerTest extends TestCase
 		$paginator->shouldReceive('getPerPage')->once()->andReturn(10);
 		$paginator->shouldReceive('getPaginator')->once()->andReturn($abstract_paginator);
 
-		$abstract_paginator->shouldReceive('addQuery')->once()->with(ApiDataSerializer::PAGINATION_PER_PAGE, 10);
+		$abstract_paginator->shouldReceive('appends')->once()->with(ApiDataSerializer::PAGINATION_PER_PAGE, 10);
 		$abstract_paginator->shouldReceive('perPage')->once()->andReturn(10);
 
 		$paginator->shouldReceive('getUrl')->once()->with(2)->andReturn('foo');

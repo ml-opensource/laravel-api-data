@@ -103,9 +103,9 @@ class ApiDataSerializer extends FractalSerializer
 				]
 			) as $key => $value
 		) {
-			$paginator->addQuery($key, $value);
+			$paginator->appends($key, $value);
 		}
 		// Add our "per page" pagination parameter to the constructed URLs
-		$paginator->addQuery(self::PAGINATION_PER_PAGE, $paginator->perPage());
+		$paginator->appends(self::PAGINATION_PER_PAGE, $paginator->perPage());
 	}
 }
